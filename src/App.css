@@ -95,6 +95,7 @@ body {
 }
 .layer-control button:disabled {
   cursor: default;
+  background-color: #fff;
 }
 
 .layer-control .btn-active {
