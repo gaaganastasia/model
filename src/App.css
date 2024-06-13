@@ -89,9 +89,12 @@ body {
   background-color: #6A96EC7D;
 }
 
-.layer-control button:disabled:hover {
+.layer-control .btn-bottom:hover {
   cursor: default;
   background-color: #fff;
+}
+.layer-control button:disabled {
+  cursor: default;
 }
 
 .layer-control .btn-active {
