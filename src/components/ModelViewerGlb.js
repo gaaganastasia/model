@@ -15,15 +15,29 @@ function Model({ layers, setLayers }) {
             action.play();
         }
 
-        // Initialize layers
-        const initialLayers = scene.children.map((child, index) => ({
-            name: `${index + 1}`,
-            visible: true,
-            object: child,
-            originalIndex: index,
-            targetY: 0, // начальное положение по Y
-            moving: false // флаг движения
-        }));
+        // Инициализация слоев
+        const initialLayers = scene.children.map((child, index) => {
+            // Сохранение оригинальных материалов
+            const originalMaterials = [];
+            child.traverse((node) => {
+                if (node.isMesh) {
+                    originalMaterials.push(node.material);
+                    node.material = node.material.clone();
+                    node.material.transparent = true;
+                }
+            });
+
+            return {
+                name: `${index + 1}`,
+                visible: true,
+                object: child,
+                originalIndex: index,
+                targetY: 0, // начальное положение по Y
+                moving: false, // флаг движения
+                opacity: 1, // начальная прозрачность
+                originalMaterials: originalMaterials // сохраненные оригинальные материалы
+            };
+        });
 
         setLayers(initialLayers);
     }, [scene, setLayers, animations]);
@@ -31,29 +45,50 @@ function Model({ layers, setLayers }) {
     useFrame((state, delta) => {
         if (mixer.current) mixer.current.update(delta);
 
-        layers.forEach(layer => {
+        layers.forEach((layer) => {
             if (layer.object) {
                 const targetY = layer.visible ? 0 : 5; // Целевая позиция
+                const targetOpacity = layer.visible ? 1 : 0; // Целевая прозрачность
+
+                // Плавное перемещение
                 if (Math.abs(targetY - layer.object.position.y) > 0.01) {
-                    layer.object.position.y += (targetY - layer.object.position.y) * 0.1; // Плавное перемещение
-                    layer.moving = true; // Установить флаг движения
+                    layer.object.position.y += (targetY - layer.object.position.y) * 0.12;
+                    layer.moving = true;
                 } else {
                     layer.object.position.y = targetY;
-                    layer.moving = false; // Сбросить флаг движения
-                    if (!layer.visible) {
-                        layer.object.visible = false; // Скрыть слой, если он не видим
-                    }
+                    layer.moving = false;
+                }
+
+                // Плавное изменение прозрачности
+                if (Math.abs(targetOpacity - layer.opacity) > 0.01) {
+                    layer.opacity += (targetOpacity - layer.opacity) * 0.12;
+                    layer.object.traverse((node) => {
+                        if (node.isMesh) {
+                            node.material.opacity = layer.opacity;
+                        }
+                    });
+                } else {
+                    layer.opacity = targetOpacity;
+                    layer.object.traverse((node) => {
+                        if (node.isMesh) {
+                            node.material.opacity = layer.opacity;
+                        }
+                    });
+                }
+
+                if (!layer.visible && !layer.moving) {
+                    layer.object.visible = false; // Скрыть слой, если он не видим
+                } else if (layer.visible && !layer.moving) {
+                    layer.object.visible = true; // Показать слой, если он видим
                 }
             }
         });
     });
 
     useEffect(() => {
-        layers.forEach(layer => {
-            if (layer.object) {
-                if (layer.visible) {
-                    layer.object.visible = true; // Показать слой, если он видим
-                }
+        layers.forEach((layer) => {
+            if (layer.object && layer.visible) {
+                layer.object.visible = true; // Показать слой, если он видим
             }
         });
     }, [layers]);
@@ -65,21 +100,25 @@ export default function ModelViewer() {
     const [layers, setLayers] = useState([]);
 
     const toggleLayerVisibility = (layerToToggle) => {
-        console.log('Toggling layer:', layerToToggle.name);
+        console.log('Переключение слоя:', layerToToggle.name);
 
-        // If the bottom layer is clicked, do nothing
+        // Если нажата нижняя кнопка, ничего не делать
         if (layerToToggle.originalIndex === 0) return;
 
-        // If the middle layer is clicked, toggle both top and middle layers
+        // Если нажата средняя кнопка, переключить верхний и средний слои
         if (layerToToggle.originalIndex === 1) {
-            setLayers(layers.map(layer => 
-                layer.originalIndex >= 1 ? { ...layer, visible: !layer.visible, moving: true } : layer
-            ));
+            setLayers((prevLayers) =>
+                prevLayers.map((layer) =>
+                    layer.originalIndex >= 1 ? { ...layer, visible: !layer.visible, moving: true } : layer
+                )
+            );
         } else {
-            // Toggle only the top layer
-            setLayers(layers.map(layer =>
-                layer === layerToToggle ? { ...layer, visible: !layer.visible, moving: true } : layer
-            ));
+            // Переключить только верхний слой
+            setLayers((prevLayers) =>
+                prevLayers.map((layer) =>
+                    layer === layerToToggle ? { ...layer, visible: !layer.visible, moving: true } : layer
+                )
+            );
         }
     };
 
@@ -98,8 +137,8 @@ export default function ModelViewer() {
                     <directionalLight position={[0, 1, 0]} intensity={1} />
                     <Model layers={layers} setLayers={setLayers} />
                     <OrbitControls
-                        minDistance={0.3} 
-                        maxDistance={0.4} 
+                        minDistance={0.3}
+                        maxDistance={0.4}
                         minPolarAngle={0} // Ограничение вверх
                         maxPolarAngle={Math.PI / 2.9} // Ограничение вниз (до горизонта)
                         rotateSpeed={0.1}

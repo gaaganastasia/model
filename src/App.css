@@ -89,6 +89,11 @@ body {
   background-color: #6A96EC7D;
 }
 
+.layer-control button:disabled:hover {
+  cursor: default;
+  background-color: #fff;
+}
+
 .layer-control .btn-active {
   background-color: #6A96EC7D;
 }
@@ -267,7 +272,7 @@ body {
 
 .about__line {
   height: 3px;
-  width: 708px;
+  width: calc(509px + 80px + ((100% - 1240px) / 2));
   background-color: #000;
   margin: 12px 0 0;
   align-self: flex-end;
@@ -428,7 +433,7 @@ body {
 
 .ddd__line {
   height: 3px;
-  width: 365px;
+  width: calc(138px + 80px + ((100% - 1240px) / 2));
   background-color: #000;
   margin: 12px 0 84px;
   align-self: flex-end;
